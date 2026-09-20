@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stacja pogodowa - Skarzysko-Kamienna</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;background:#071018;color:#fff;font-family:Arial,sans-serif;overflow:hidden}
+*{box-sizing:border-box}
+#app{height:100%;padding:14px 20px;position:relative}
+.top{position:relative;height:275px}
+.clockbox{position:absolute;left:0;top:0}
+#clock{font-size:250px;font-weight:bold;line-height:.9;letter-spacing:-5px}
+#date{font-size:22px;color:#b9c8d4;margin-top:10px}
+.weather{position:absolute;right:0;top:0;text-align:right}
+.place{font-size:18px;color:#9eb2c2}
+.current{font-size:64px;font-weight:bold;margin-top:5px}
+.desc{font-size:22px}
+.details{font-size:16px;color:#c7d4de;margin-top:6px}
+.line{height:1px;background:#29404f;margin:12px 0}
+.hours{text-align:center;white-space:nowrap}
+.hour{display:inline-block;vertical-align:top;width:16%;font-size:16px;text-align:center}
+.hour .ico{font-size:26px;margin:4px 0}
+.hour .temp{font-size:21px;font-weight:bold}
+.bottom{text-align:center;white-space:nowrap;margin-top:12px}
+.day{display:inline-block;vertical-align:top;text-align:center;width:19%;font-size:15px}
+.day .ico{font-size:27px;margin:3px}
+.day .temps{font-size:18px;font-weight:bold}
+.status{position:absolute;bottom:3px;right:7px;font-size:10px;color:#617481}
+
+/* Proste ikony CSS - bez emoji, SVG i zewnetrznych fontow */
+.wi{display:inline-block;font-family:Arial,sans-serif;font-weight:bold;text-align:center;min-width:34px}
+.wi-sun{border:3px solid #fff;border-radius:50%;width:28px;height:28px;line-height:20px;font-size:0}
+.wi-moon{font-size:25px}
+.wi-part{font-size:22px;letter-spacing:-4px}
+.wi-cloud{font-size:20px;letter-spacing:-5px}
+.wi-fog{font-size:20px;letter-spacing:-3px}
+.wi-rain{font-size:22px;letter-spacing:1px}
+.wi-snow{font-size:22px;letter-spacing:1px}
+.wi-storm{font-size:13px;border:2px solid #fff;padding:3px}
+
+</style>
+</head>
+<body>
+<div id="app">
+ <div class="top">
+  <div class="clockbox">
+   <div id="clock">--:--</div>
+   <div id="date">Ladowanie daty...</div>
+  </div>
+  <div class="weather">
+   <div class="place">SKARZYSKO-KAMIENNA</div>
+   <div class="current"><span id="nowIcon" class="weatherIcon">?</span> <span id="temp">--&deg;</span></div>
+   <div class="desc" id="desc">Pobieranie pogody...</div>
+   <div class="details" id="details">-</div>
+   <div class="details" id="sun">-</div>
+  </div>
+ </div>
+ <div class="line"></div>
+ <div class="hours" id="hours"></div>
+ <div class="line"></div>
+ <div class="bottom" id="days"></div>
+ <div class="status" id="status"></div>
+</div>
+<script type="text/javascript">
+var LAT=51.1136, LON=20.8716;
+var DAYS=["Niedz.","Pon.","Wt.","Sr.","Czw.","Pt.","Sob."];
+var MONTHS=["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","wrzesnia","pazdziernika","listopada","grudnia"];
+
+function el(id){return document.getElementById(id);}
+function pad(n){return n<10?"0"+n:n;}
+function tick(){
+ var d=new Date();
+ el("clock").innerHTML=pad(d.getHours())+":"+pad(d.getMinutes());
+ el("date").innerHTML=DAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear();
+}
+setInterval(tick,1000); tick();
+
+function info(code,day){
+ /* Ikony bez emoji - zgodne ze starym Androidem/Opera */
+ if(code===0)return ["Bezchmurnie",day?"SUN":"MOON"];
+ if(code===1)return ["Pogodnie",day?"SUN":"MOON"];
+ if(code===2)return ["Czesciowe zachmurzenie","PART"];
+ if(code===3)return ["Pochmurno","CLOUD"];
+ if(code===45||code===48)return ["Mgla","FOG"];
+ if(code>=51&&code<=67)return ["Deszcz","RAIN"];
+ if(code>=71&&code<=77)return ["Snieg","SNOW"];
+ if(code>=80&&code<=82)return ["Przelotny deszcz","RAIN"];
+ if(code>=85&&code<=86)return ["Przelotny snieg","SNOW"];
+ if(code>=95)return ["Burza","STORM"];
+ return ["Pogoda","CLOUD"];
+}
+function iconHtml(name){
+ var t="?";
+ if(name==="SUN")t="O";
+ else if(name==="MOON")t="C";
+ else if(name==="PART")t="O~";
+ else if(name==="CLOUD")t="~~~";
+ else if(name==="FOG")t="===";
+ else if(name==="RAIN")t="///";
+ else if(name==="SNOW")t="***";
+ else if(name==="STORM")t="ZAP";
+ return '<span class="wi wi-'+name.toLowerCase()+'">'+t+'</span>';
+}
+function xhr(url,ok,fail){
+ var x=new XMLHttpRequest();
+ x.onreadystatechange=function(){
+  if(x.readyState===4){
+   if(x.status>=200&&x.status<300){
+    try{ok(JSON.parse(x.responseText));}catch(e){fail();}
+   }else{fail();}
+  }
+ };
+ x.open("GET",url,true);
+ try{x.send(null);}catch(e){fail();}
+}
+function hm(s){return s?s.substring(11,16):"--:--";}
+function fetchWeather(){
+ var url="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
+ "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"+
+ "&hourly=temperature_2m,weather_code"+
+ "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"+
+ "&timezone=Europe%2FWarsaw&forecast_days=7";
+ xhr(url,function(d){
+  var c=d.current, inf=info(c.weather_code,c.is_day===1);
+  el("temp").innerHTML=Math.round(c.temperature_2m)+"&deg;";
+  el("nowIcon").innerHTML=iconHtml(inf[1]);
+  el("desc").innerHTML=inf[0];
+  el("details").innerHTML="Odczuwalna "+Math.round(c.apparent_temperature)+"&deg; | Wilgotnosc "+c.relative_humidity_2m+"% | Wiatr "+Math.round(c.wind_speed_10m)+" km/h";
+  el("sun").innerHTML="Wschod "+hm(d.daily.sunrise[0])+" | Zachod "+hm(d.daily.sunset[0]);
+  var h="",now=new Date(),start=-1,i,j,k,ii;
+  for(i=0;i<d.hourly.time.length;i++){if(new Date(d.hourly.time[i])>=now){start=i;break;}}
+  if(start<0)start=0;
+  for(j=0;j<6;j++){
+   k=start+j; ii=info(d.hourly.weather_code[k],true);
+   h+='<div class="hour"><div>'+d.hourly.time[k].substring(11,16)+'</div><div class="ico">'+ii[1]+'</div><div class="temp">'+Math.round(d.hourly.temperature_2m[k])+'&deg;</div></div>';
+  }
+  el("hours").innerHTML=h;
+  var out="",q,dt,di;
+  for(q=0;q<5;q++){
+   dt=new Date(d.daily.time[q]+"T12:00:00"); di=info(d.daily.weather_code[q],true);
+   out+='<div class="day"><div>'+DAYS[dt.getDay()]+'</div><div class="ico">'+di[1]+'</div><div class="temps">'+Math.round(d.daily.temperature_2m_max[q])+'&deg; / '+Math.round(d.daily.temperature_2m_min[q])+'&deg;</div></div>';
+  }
+  el("days").innerHTML=out;
+  el("status").innerHTML="Aktualizacja: "+pad(new Date().getHours())+":"+pad(new Date().getMinutes());
+ },function(){
+  el("desc").innerHTML="Brak polaczenia z pogoda";
+  el("status").innerHTML="Ponawiam automatycznie";
+ });
+}
+fetchWeather();
+setInterval(fetchWeather,900000);
+</script>
+</body>
+</html>
