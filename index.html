@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stacja pogodowa – Skarżysko-Kamienna</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#071018;color:#fff;font-family:Arial,sans-serif;overflow:hidden}
+*{box-sizing:border-box}
+#app{height:100vh;padding:16px 22px;display:flex;flex-direction:column}
+.top{display:flex;justify-content:space-between;align-items:flex-start}
+#clock{font-size:108px;font-weight:bold;line-height:.9;letter-spacing:-5px}
+#date{font-size:22px;color:#b9c8d4;margin-top:10px}
+.weather{text-align:right}
+.place{font-size:18px;color:#9eb2c2}
+.current{font-size:64px;font-weight:bold;margin-top:5px}
+.desc{font-size:22px}
+.details{font-size:16px;color:#c7d4de;margin-top:6px}
+.line{height:1px;background:#29404f;margin:14px 0}
+.hours{display:flex;justify-content:space-between;text-align:center}
+.hour{width:16%;font-size:16px}
+.hour .ico{font-size:26px;margin:4px 0}
+.hour .temp{font-size:21px;font-weight:bold}
+.bottom{display:flex;justify-content:space-between;margin-top:auto}
+.day{text-align:center;width:19%;font-size:15px}
+.day .ico{font-size:27px;margin:3px}
+.day .temps{font-size:18px;font-weight:bold}
+.status{position:absolute;bottom:3px;right:7px;font-size:10px;color:#617481}
+</style>
+</head>
+<body>
+<div id="app">
+ <div class="top">
+  <div>
+   <div id="clock">--:--</div>
+   <div id="date">Ładowanie daty…</div>
+  </div>
+  <div class="weather">
+   <div class="place">SKARŻYSKO-KAMIENNA</div>
+   <div class="current"><span id="nowIcon">☁</span> <span id="temp">--°</span></div>
+   <div class="desc" id="desc">Pobieranie pogody…</div>
+   <div class="details" id="details">—</div>
+   <div class="details" id="sun">—</div>
+  </div>
+ </div>
+ <div class="line"></div>
+ <div class="hours" id="hours"></div>
+ <div class="line"></div>
+ <div class="bottom" id="days"></div>
+ <div class="status" id="status"></div>
+</div>
+<script>
+var LAT=51.1136, LON=20.8716; // Skarżysko-Kamienna
+var DAYS=["Niedz.","Pon.","Wt.","Śr.","Czw.","Pt.","Sob."];
+var MONTHS=["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","września","października","listopada","grudnia"];
+
+function pad(n){return n<10?"0"+n:n}
+function tick(){
+ var d=new Date();
+ document.getElementById("clock").innerHTML=pad(d.getHours())+":"+pad(d.getMinutes());
+ document.getElementById("date").innerHTML=DAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear();
+}
+setInterval(tick,1000); tick();
+
+function info(code,day){
+ if(code===0)return ["Bezchmurnie",day?"☀":"☾"];
+ if(code===1)return ["Przeważnie pogodnie",day?"🌤":"☾"];
+ if(code===2)return ["Częściowe zachmurzenie","⛅"];
+ if(code===3)return ["Pochmurno","☁"];
+ if(code===45||code===48)return ["Mgła","≋"];
+ if(code===51||code===53||code===55)return ["Mżawka","🌦"];
+ if(code===56||code===57)return ["Marznąca mżawka","🌧"];
+ if(code===61||code===63||code===65)return ["Deszcz","🌧"];
+ if(code===66||code===67)return ["Marznący deszcz","🌧"];
+ if(code===71||code===73||code===75||code===77)return ["Śnieg","❄"];
+ if(code===80||code===81||code===82)return ["Przelotny deszcz","🌦"];
+ if(code===85||code===86)return ["Przelotny śnieg","🌨"];
+ if(code===95||code===96||code===99)return ["Burza","⛈"];
+ return ["Pogoda","☁"];
+}
+function xhr(url,ok,fail){
+ var x=new XMLHttpRequest();
+ x.onreadystatechange=function(){if(x.readyState===4){if(x.status>=200&&x.status<300)ok(JSON.parse(x.responseText));else fail();}};
+ x.open("GET",url,true); x.send();
+}
+function hm(s){return s ? s.substring(11,16) : "--:--"}
+function fetchWeather(){
+ var url="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
+ "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"+
+ "&hourly=temperature_2m,weather_code"+
+ "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"+
+ "&timezone=Europe%2FWarsaw&forecast_days=7";
+ xhr(url,function(d){
+  var c=d.current, inf=info(c.weather_code,c.is_day===1);
+  document.getElementById("temp").innerHTML=Math.round(c.temperature_2m)+"°";
+  document.getElementById("nowIcon").innerHTML=inf[1];
+  document.getElementById("desc").innerHTML=inf[0];
+  document.getElementById("details").innerHTML="Odczuwalna "+Math.round(c.apparent_temperature)+"° &nbsp; • &nbsp; Wilgotność "+c.relative_humidity_2m+"% &nbsp; • &nbsp; Wiatr "+Math.round(c.wind_speed_10m)+" km/h";
+  document.getElementById("sun").innerHTML="☀ Wschód "+hm(d.daily.sunrise[0])+" &nbsp; • &nbsp; Zachód "+hm(d.daily.sunset[0]);
+  var h="", now=new Date(), start=-1;
+  for(var i=0;i<d.hourly.time.length;i++){if(new Date(d.hourly.time[i])>=now){start=i;break;}}
+  if(start<0)start=0;
+  for(var j=0;j<6;j++){var k=start+j, ii=info(d.hourly.weather_code[k],true);
+   h+='<div class="hour"><div>'+d.hourly.time[k].substring(11,16)+'</div><div class="ico">'+ii[1]+'</div><div class="temp">'+Math.round(d.hourly.temperature_2m[k])+'°</div></div>';
+  }
+  document.getElementById("hours").innerHTML=h;
+  var out="";
+  for(var q=0;q<5;q++){var dt=new Date(d.daily.time[q]+"T12:00:00"), di=info(d.daily.weather_code[q],true);
+   out+='<div class="day"><div>'+DAYS[dt.getDay()]+'</div><div class="ico">'+di[1]+'</div><div class="temps">'+Math.round(d.daily.temperature_2m_max[q])+'° / '+Math.round(d.daily.temperature_2m_min[q])+'°</div></div>';
+  }
+  document.getElementById("days").innerHTML=out;
+  document.getElementById("status").innerHTML="Aktualizacja: "+pad(new Date().getHours())+":"+pad(new Date().getMinutes());
+ },function(){
+  document.getElementById("desc").innerHTML="Brak połączenia z pogodą";
+  document.getElementById("status").innerHTML="Ponawiam automatycznie";
+ });
+}
+fetchWeather(); setInterval(fetchWeather,15*60*1000);
+</script>
+</body>
+</html>
