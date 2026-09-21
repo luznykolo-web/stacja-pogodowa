@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stacja pogodowa</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;background:#071018;color:#fff;font-family:Arial,sans-serif;overflow:hidden}
+#app{padding:14px 18px}
+#top{position:relative;height:255px}
+#left{position:absolute;left:0;top:0}
+#right{position:absolute;right:0;top:0;text-align:right}
+#clock{font-size:220px;font-weight:bold;line-height:.9}
+#date{font-size:21px;color:#c3d0d8;margin-top:8px}
+#place{font-size:18px;color:#a9bbc7}
+#current{font-size:60px;font-weight:bold;margin-top:5px}
+#current img{width:58px;height:58px;vertical-align:middle}
+#desc{font-size:22px}
+.detail{font-size:15px;color:#c7d4de;margin-top:6px}
+.line{height:1px;background:#29404f;margin:12px 0}
+#hours,#days{text-align:center;white-space:nowrap}
+.hour{display:inline-block;width:16%;vertical-align:top;font-size:16px}
+.day{display:inline-block;width:19%;vertical-align:top;font-size:15px}
+.ico img{width:42px;height:42px}
+.temp,.temps{font-size:20px;font-weight:bold}
+#status{position:absolute;right:7px;bottom:3px;font-size:10px;color:#71828e}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="top"><div id="left"><div id="clock">--:--</div><div id="date">Ladowanie...</div></div>
+<div id="right"><div id="place">SKARZYSKO-KAMIENNA</div><div id="current"><span id="nowIcon"></span> <span id="temp">-- C</span></div>
+<div id="desc">Pobieranie pogody...</div><div class="detail" id="details">-</div><div class="detail" id="sun">-</div></div></div>
+<div class="line"></div><div id="hours"></div><div class="line"></div><div id="days"></div><div id="status"></div>
+</div>
+<script type="text/javascript">
+var LAT=51.1136,LON=20.8716;
+var DAYS=["Niedz.","Pon.","Wt.","Sr.","Czw.","Pt.","Sob."];
+var MONTHS=["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","wrzesnia","pazdziernika","listopada","grudnia"];
+var ICONS={"sun":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABf0lEQVR42u1aSQ7DMAgMKDf//6k5t6dIVRW1NgybzNwqpTYzLMHEx9FoNHYGRW5+Xdfr8/cYw90e3j0CWoAWoAVoAVSVOxtW7WPJ4llFkNjHUmWziSC1b1qApyYliwhPdsw2VUspkFEEDXlREcwkgpa86iyA2DyavKoPiIwEpPiqRihCBHTkqTvB782t0wC9HyE9M2vMryhZWQMhtusAYiU9vAoqZSPuLQRnJu9RVCmK/OobxCoSyJv8DBHNf1dxehXAFePvZz0aK86Y957rcjbve78KuYr3rdbnrN73ioJTq3DE5yykzT0WbwE2B3nko6ZOWI/e4BHgPRApkQLSd3fZVtgqCkofhm5vak6DPQ+oJgDKm5aFdfuzwPZTYfYkN8agf8RmnkEWSkKT9/Accj9Ge957IKLdj9FhH9EKa0TgSuQtRKBI8trL0gg7uJLnLSKBq5JHicCVySNEEN8TzEJea5/onmA28hr7IPcEM0dC+GkwO1qAFqAFaDQaG+MNVAohA9saesYAAAAASUVORK5CYII=","moon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABXUlEQVR42u2bLw/CMBDF1zOIGYIiQfL9PxKSBEUwFVOgULBk7f1f35OEtL3fvV63tpsmCIKggVWiDuxwPL///b68HmXXANYC1wJBGYNv/W84B9RafwZ/uly72uI6oXgHzgleAkLxDFwieC4E2kPwnJpAXsFHEXkFL5l9jgto1MyrAdgSvEb2e11Ao2be7UlQM/s9LqCRsx/uXSAtgKzZN3eAxfxvrQOYAiPbHw4AAADgAcg+/+EAAAAAAAAAy86e95tZX1u3yeEAAAAAW1nUgZZjMhaAeZ4LHBDMBa2HpKgBXh1ruKDniJwNIHsdcJ0Cki4Ie0HCAgLniowIAO404EDgXpIKswr0QJC4KygGQKIYtkCQuigpWsElN0nXjtG+kKRWH/ElzGKnWHLppciDs2ifMgxSs13KkiktqJTBrprTSv05gDt47ZoS4ra450tWmO8F9vJ2CUEQBEGJ9AGAzpRMtgExAAAAAABJRU5ErkJggg==","cloud":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAwUlEQVR42u3YwRWCMBAFQLLdeLYDC7cDz5ajFcgTTCK7zFzlxfxPFJJlAQAAAADOpB1lIvfH8/Xps9v10soWsBZ8RhGRJfye6w9dwN4wvUuITOFHlBDZwvceJzKG7zneX/8EjyCy3v1e47ZMYUe8J7QKwX8polUKvqeEqBh+y7yiYvgt84uq4b+dp/eAM4RcWwVReflbAQpQgAKGFDDylNYKmLwv8BOYufc+4q4wRg6eYUscM76k9HmApwAAAACk8wYow1zEVKC1WwAAAABJRU5ErkJggg==","part":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABQ0lEQVR42u2YORLCMAxFEw1dTkLNDTg4PQU11NwhNbRMJo43yXh5r0xix/9b8qJpAgAAGJZZo5N1XT97z5dlmbs1wCXaRa1mSAnxqW2qjIA9Ia7Zjfm2CQO2gkLFpLarKgVyRGy/rSkdpNQM1mqC5AppfSeQaXAkJvw1ZvC3jxrSgAjAgME51TKQ2+PpXA+ul7PZ7uHtWHsR3PZ5f72D21kY4U0B7VU7VbwvSppbA2LFW5kgOTOY2jZVvIUJQQZonOO1xGubEBwBOSZoi9c0ISoF9kw4MsL3vrmCSE4KaM++1vZoUhS1FKtthOrB5l/Cc4xQMcDigFLKBOlRfMy4pEfxMeOTXsWHjpOCyAgij6JAeg5/IgADMAADTAywrNISAYXvBaTAP4oQNd0KxbLzFq7EUuInXdcD2AUAAAAAAAAAmuMLzpLMtOZcq7gAAAAASUVORK5CYII=","rain":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABCklEQVR42u2YORLDIBAEtaT8wbEVK3Cuh/sHjv0SxXbu8gFozTHqDlWUim12AGmaAAAAAAAOifU2oevt/nh9ti6zSQt4V/QnvGWEkYovGd+1gNJiPCWE0Yr3lhBGLN7zPc33ALlj8NuqrMts3pvY3pPBemvr4QS0LNxDhikVXyIiKBafM7+gWHzOPOWPwV8SDn8PCKrtz00wcdGIAAIQUO/eTQd0eC0mArU/P2UicDmfhm//3RHoXUJKp8ruAX/9H7Btm8z3gHkIiDFaT+O4B9QUkLoKrca5C0jNf6txRAABFQWMnv9sAWr5JwII2CFAIf9ZAhTzTwQQUChAJf/JAlTzTwQAAADg0DwBlhenlUqK4tAAAAAASUVORK5CYII=","snow":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABcUlEQVR42u1YSQ7DIAysrd54Sc/9QR7eH/Tcl3BOT5UqlAWMAePMSLkQBDMTG5vcbgAAAAAAXBVkjdDr/VnTseX5INcGbIneg7YZPJN4yXzTBkjFaJrAs4nXNoFnFK+5zvAzwF0ZPPoqy/NB2odYbWUga2E9nQEjhWuYQZ7ES4xgj+JL+LFH8SU83ZfBMxMu3wew1/BHJ5j50ZACMAAG9Ou7EQEG22KkQO/rp5sUmMWEM57ccvEZrsRuz4Dm/wMAI4gxrjFG8QWNrRFCI5Rpcsl4cwM0CeXula69N34G0hQfQqAtAiEE6hEBkr3IGqGaPSV7kTVCEpNrzL+3JJTOOSL0m9sqYtQN6I1/YzRTjmsI/R7pPEn1SA/d2lRhzdyUiCwpZ0d75UaIqgE1hErep2N7UXf2Xt2AWkKl4znihvQBJad5q3Jmpgr0LmO1GEp2RAdp5jaoXc6mMqBFOZv+Tp/+SHEtfs+Qy4kGAAAAAGAovqBgHx4waYRRAAAAAElFTkSuQmCC","fog":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAVklEQVR42u3WsQ0AEABFQWyjtoHBbaA2DhOIGne1xo/ICwEAAAAAvhJPB1of8/ZL1pK390y/vwAD+AUAQApLYSVoAABACkthJWgAAEAKS2ElaAAAgEctBQUQHRn+vDsAAAAASUVORK5CYII=","storm":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABO0lEQVR42u1YOw7CMAxtrG69AzPMDOwcnBswc5LOsBbUohSc+Nl+b6yqKO/jOM4wEARBEERaFLQN3e6P5+e36/lUQguwRnoL2mKIJ/K//A8twK9kNEUQb+S1RRCP5DXXGXuSa3mam3cB7cNpD/4RdvRM3DwBiOT3pqFEdb5WCBmCotYgiVz3NfsMm4BaESSq+26GIQpgXAZMAAWgAP0GDyYA8Fos2gsyAVkE0E7B5XgwmQql5eLo5EOXgJv3gKX7rZLwDean+TzPb/f0aZq67kmQyLMNZhJgy/3eqUifgOK19rUOS8lM3mUJaLdJ8eR+izsC22Bm990koOX1WNDdbz0bwDxtrYnUYzCSzOTZBRAEsHQfMgGpHkSsyZsLsIy/BXmYBFiRNxUA4T0QIgGW7pvWPkoCUsefIAjiBRfQldxhSXQ3AAAAAElFTkSuQmCC"};
+function E(x){return document.getElementById(x)}
+function pad(n){return n<10?"0"+n:n}
+function tick(){var d=new Date();E("clock").innerHTML=pad(d.getHours())+":"+pad(d.getMinutes());E("date").innerHTML=DAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear()}
+setInterval(tick,1000);tick();
+function wi(c,day){
+ if(c===0)return ["Bezchmurnie",day?"sun":"moon"];
+ if(c===1)return ["Pogodnie",day?"sun":"moon"];
+ if(c===2)return ["Czesciowe zachmurzenie","part"];
+ if(c===3)return ["Pochmurno","cloud"];
+ if(c===45||c===48)return ["Mgla","fog"];
+ if(c>=51&&c<=67)return ["Deszcz","rain"];
+ if(c>=71&&c<=77)return ["Snieg","snow"];
+ if(c>=80&&c<=82)return ["Przelotny deszcz","rain"];
+ if(c>=85&&c<=86)return ["Przelotny snieg","snow"];
+ if(c>=95)return ["Burza","storm"];
+ return ["Pogoda","cloud"];
+}
+function pic(n){return '<img src="'+ICONS[n]+'" alt="">'}
+function req(url,ok,bad){var x=new XMLHttpRequest();x.onreadystatechange=function(){if(x.readyState===4){if(x.status>=200&&x.status<300){try{ok(JSON.parse(x.responseText))}catch(e){bad()}}else bad()}};x.open("GET",url,true);try{x.send(null)}catch(e){bad()}}
+function hm(s){return s?s.substring(11,16):"--:--"}
+function load(){
+ var u="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=Europe%2FWarsaw&forecast_days=7";
+ req(u,function(d){
+  var c=d.current,a=wi(c.weather_code,c.is_day===1);E("nowIcon").innerHTML=pic(a[1]);E("temp").innerHTML=Math.round(c.temperature_2m)+" C";E("desc").innerHTML=a[0];
+  E("details").innerHTML="Odczuwalna "+Math.round(c.apparent_temperature)+" C | Wilgotnosc "+c.relative_humidity_2m+"% | Wiatr "+Math.round(c.wind_speed_10m)+" km/h";
+  E("sun").innerHTML="Wschod "+hm(d.daily.sunrise[0])+" | Zachod "+hm(d.daily.sunset[0]);
+  var now=new Date(),s=0,i,j,k,a2,h="";
+  for(i=0;i<d.hourly.time.length;i++){if(new Date(d.hourly.time[i])>=now){s=i;break}}
+  for(j=0;j<6;j++){k=s+j;a2=wi(d.hourly.weather_code[k],1);h+='<div class="hour"><div>'+d.hourly.time[k].substring(11,16)+'</div><div class="ico">'+pic(a2[1])+'</div><div class="temp">'+Math.round(d.hourly.temperature_2m[k])+' C</div></div>'}E("hours").innerHTML=h;
+  var o="",q,dt,a3;for(q=0;q<5;q++){dt=new Date(d.daily.time[q]+"T12:00:00");a3=wi(d.daily.weather_code[q],1);o+='<div class="day"><div>'+DAYS[dt.getDay()]+'</div><div class="ico">'+pic(a3[1])+'</div><div class="temps">'+Math.round(d.daily.temperature_2m_max[q])+' / '+Math.round(d.daily.temperature_2m_min[q])+' C</div></div>'}E("days").innerHTML=o;
+  E("status").innerHTML="Aktualizacja "+pad(new Date().getHours())+":"+pad(new Date().getMinutes());
+ },function(){E("desc").innerHTML="Brak polaczenia z pogoda";E("status").innerHTML="Ponawiam automatycznie"})
+}
+load();setInterval(load,900000);
+</script></body></html>
